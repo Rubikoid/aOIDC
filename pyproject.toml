@@ -5,17 +5,18 @@ description = "my description"
 authors = [{ name = "Rubikoid", email = "rubikoid@rubikoid.ru" }]
 requires-python = ">= 3.12"
 
-dependencies = []
+dependencies = [
+    "httpx>=0.28.1",
+    "msgspec>=0.19.0",
+    "pydantic>=2.10.6",
+    "pydantic-settings>=2.8.1",
+]
 
 [project.optional-dependencies]
 
 
 [dependency-groups]
-dev = [
-    "ruff",
-    "black",
-    "pytest>=8.3.4",
-]
+dev = ["ruff", "black", "pytest>=8.3.4"]
 
 [build-system]
 requires = ["setuptools >= 61.0"]
