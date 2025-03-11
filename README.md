@@ -1,15 +1,23 @@
 # aOIDC
 
-Suckless implementation of [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html) for python with asyncio support in mind.
+Suckless implementation of [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0-final.html) for python with asyncio support in mind.
 
 Also implemented:
 
 - [ ] [RFC 6749](https://datatracker.ietf.org/doc/html/rfc6749): The OAuth 2.0 Authorization Framework
+- [ ] [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591): OAuth 2.0 Dynamic Client Registration Protocol - partically
 - [ ] [RFC 7662](https://datatracker.ietf.org/doc/html/rfc7662): OAuth 2.0 Token Introspection
+- [ ] [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414): OAuth 2.0 Authorization Server Metadata
+- [ ] [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0-final.html)
+- [ ] [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0-final.html)
+- [ ] [RFC 7033](https://datatracker.ietf.org/doc/html/rfc7033): WebFinger
 
 ## Implementation status / Roadmap
 
 Core functional, that i need from such library is simple client authentication with authorization code flow, so this will be implemented first.
+
+1. [ ] OIDC Client for `CODE` flow
+2. [ ] OIDC Client for `PKCE` flow
 
 ## Motivation
 
