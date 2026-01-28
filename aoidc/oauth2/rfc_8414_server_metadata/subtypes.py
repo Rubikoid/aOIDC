@@ -2,17 +2,41 @@
 from typing import Annotated, NewType
 from urllib.parse import urlparse
 
-from pydantic import AfterValidator, AnyUrl, UrlConstraints
+from pydantic import AfterValidator, AnyUrl, UrlConstraints, ValidationInfo
 from pydantic_core import Url
 
 from aoidc.config import settings
 from aoidc.errors import GenericValidationError
 from aoidc.jwt import JsonWebAlgos
+from aoidc.oauth2.context import ValidationContext
+from aoidc.utils import is_same_origin
 
 Issuer = NewType("Issuer", AnyUrl)
 
 
-def generic_endpoint_validator(endpoint: AnyUrl) -> AnyUrl:
+def check_for_allowned_urls(endpoint: AnyUrl, info: ValidationInfo) -> None:
+    # TODO: Я не нашел явных требований или ограничений в стандартах на хосты возвращаемых урлов
+    # Поэтому тут, для защиты от SSRF, делаем вот такой костыль
+    # адреса, возвращаемые в .well-known должны вести либо на такой же Origin, как и сам .well-known
+    # либо быть в отдельном явно прописанном списке избранных адресов
+
+    if settings.ALLOW_ALL_URLS:
+        return
+
+    ctx = info.context
+    if not isinstance(ctx, ValidationContext):
+        return
+
+    if is_same_origin(endpoint, ctx.origin_url):
+        return
+
+    if any(is_same_origin(endpoint, i) for i in ctx.allowed_urls):
+        return
+
+    raise GenericValidationError(f"URL {endpoint} is not allowned")
+
+
+def generic_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl:
     """
     https check is not debug
     """
@@ -20,10 +44,12 @@ def generic_endpoint_validator(endpoint: AnyUrl) -> AnyUrl:
     if endpoint.scheme != "https" and not settings.ALLOW_HTTP:
         raise GenericValidationError("Invalid endpoint")
 
+    check_for_allowned_urls(endpoint, info)
+
     return endpoint
 
 
-def issuer_validator(issuer: Issuer) -> Issuer:
+def issuer_validator(issuer: Issuer, info: ValidationInfo) -> Issuer:
     """
     REQUIRED.  The authorization server's issuer identifier, which is
     a URL that uses the "https" scheme and has no query or fragment
@@ -38,10 +64,12 @@ def issuer_validator(issuer: Issuer) -> Issuer:
     if (issuer.scheme != "https" and not settings.ALLOW_HTTP) or issuer.query or issuer.fragment:
         raise GenericValidationError("Invalid issuer")
 
+    check_for_allowned_urls(issuer, info)
+
     return issuer
 
 
-def authorization_endpoint_validator(endpoint: AnyUrl) -> AnyUrl:
+def authorization_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl:
     """
     The endpoint URI MAY include an "application/x-www-form-urlencoded"
     formatted (per Appendix B) query component ([RFC3986] Section 3.4),
@@ -60,10 +88,12 @@ def authorization_endpoint_validator(endpoint: AnyUrl) -> AnyUrl:
     if (endpoint.scheme != "https" and not settings.ALLOW_HTTP) or endpoint.fragment:
         raise GenericValidationError("Invalid endpoint")
 
+    check_for_allowned_urls(endpoint, info)
+
     return endpoint
 
 
-def token_endpoint_validator(endpoint: AnyUrl) -> AnyUrl:
+def token_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl:
     """
     The endpoint URI MAY include an "application/x-www-form-urlencoded"
     formatted (per Appendix B) query component ([RFC3986] Section 3.4),
@@ -80,6 +110,8 @@ def token_endpoint_validator(endpoint: AnyUrl) -> AnyUrl:
 
     if (endpoint.scheme != "https" and not settings.ALLOW_HTTP) or endpoint.fragment:
         raise GenericValidationError("Invalid endpoint")
+
+    check_for_allowned_urls(endpoint, info)
 
     return endpoint
 
