@@ -12,6 +12,9 @@ Also implemented:
 - [ ] [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414): OAuth 2.0 Authorization Server Metadata
 - [ ] [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0-final.html)
 - [ ] [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0-final.html)
+  - [ ] WebFinger discovery
+  - [x] Model
+  - [x] `.well-known/openid-configuration` request
 
 ## Implementation status / Roadmap
 
