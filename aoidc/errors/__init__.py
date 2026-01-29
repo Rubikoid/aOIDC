@@ -8,3 +8,6 @@ class GenericAuthError(GenericError):
 
 class GenericValidationError(ValueError, GenericError):
     pass
+
+
+class GenericOIDCError(GenericError): ...
