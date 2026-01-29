@@ -1,5 +1,8 @@
 # ruff: noqa: S105
 from enum import StrEnum
+from typing import Annotated, Any
+
+from pydantic import BeforeValidator
 
 """
 Taken from https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml as of 11.03.2025
@@ -9,9 +12,13 @@ each RFC
 """
 
 
-class ResponseTypes(StrEnum):
+class ResponseType(StrEnum):
     """
     https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#endpoint
+
+    Несмотря на то, что в стандарте написаны конкретные комбинации,
+    некоторые IdP (например, ory hydra) возвращает конструкции вида `token id_token` и `token id_token code`
+    Тогда как в стандарте написаны `token id_token code`
     """
 
     NONE = "none"
@@ -20,11 +27,24 @@ class ResponseTypes(StrEnum):
     TOKEN = "token"
     ID_TOKEN = "id_token"
 
-    CODE_AND_ID_TOKEN = "code id_token"
-    CODE_AND_ID_TOKEN_AND_TOKEN = "code id_token token"
-    CODE_AND_TOKEN = "code token"
 
-    ID_TOKEN_AND_TOKEN = "id_token token"
+def reconstruct_response_types(data: Any) -> set[tuple[ResponseType, ...]]:
+    if not isinstance(data, list) or any(not isinstance(i, str) for i in data):
+        raise ValueError("Invalid ResponseTypes input")
+
+    result: set[tuple[ResponseType, ...]] = set()
+    for entry in data:
+        responses: list[str] = entry.split(" ")
+        result_part = {ResponseType(i) for i in responses}
+        result.add(tuple(sorted(result_part)))
+
+    return result
+
+
+ResponseTypes = Annotated[
+    set[tuple[ResponseType, ...]],
+    BeforeValidator(reconstruct_response_types, json_schema_input_type=list[str]),
+]
 
 
 class AccessTokenTypes(StrEnum):

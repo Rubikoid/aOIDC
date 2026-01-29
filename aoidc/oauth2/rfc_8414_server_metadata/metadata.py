@@ -72,7 +72,7 @@ class Metadata(BaseModel):
     even when this parameter is used.
     """
 
-    response_types_supported: set[ResponseTypes]
+    response_types_supported: ResponseTypes
     """
     JSON array containing a list of the OAuth 2.0
     "response_type" values that this authorization server supports.
