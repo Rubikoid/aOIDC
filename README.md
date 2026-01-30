@@ -11,9 +11,9 @@ Also implemented:
 - [ ] [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591): OAuth 2.0 Dynamic Client Registration Protocol - **partically**
 - [ ] [RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636): Proof Key for Code Exchange by OAuth Public Clients
 - [ ] [RFC 7662](https://datatracker.ietf.org/doc/html/rfc7662): OAuth 2.0 Token Introspection
-- [ ] [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414): OAuth 2.0 Authorization Server Metadata
+- [x] [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414): OAuth 2.0 Authorization Server Metadata
   - [x] Metadata model
-  - [ ] `/.well-known/oauth-authorization-server` request
+  - [x] `/.well-known/oauth-authorization-server` request
 - [ ] [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0-final.html)
 - [ ] [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0-final.html)
   - [ ] WebFinger discovery

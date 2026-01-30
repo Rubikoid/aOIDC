@@ -19,6 +19,10 @@ class ResponseType(StrEnum):
     Несмотря на то, что в стандарте написаны конкретные комбинации,
     некоторые IdP (например, ory hydra) возвращает конструкции вида `token id_token` и `token id_token code`
     Тогда как в стандарте написаны `token id_token code`
+
+    Хотя вообще-то в https://datatracker.ietf.org/doc/html/rfc6749#section-3.1.1 про это написано, что
+    порядок не важен
+    Поэтому моя реализация этого вопроса корректна
     """
 
     NONE = "none"

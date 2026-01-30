@@ -3,6 +3,7 @@ Helper module for passing validation context
 """
 
 from dataclasses import dataclass, field
+from collections.abc import Sequence
 
 from httpx import URL
 
@@ -11,4 +12,4 @@ from httpx import URL
 class ValidationContext:
     origin_url: URL
 
-    allowed_urls: list[URL] = field(default_factory=list)
+    allowed_urls: Sequence[URL] = field(default_factory=list)
