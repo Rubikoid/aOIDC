@@ -1,3 +1,3 @@
 """
-Implementation of https://datatracker.ietf.org/doc/html/rfc8414
+Implementation of https://datatracker.ietf.org/doc/html/rfc8414.
 """

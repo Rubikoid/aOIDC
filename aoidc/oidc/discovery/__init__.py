@@ -1,5 +1,5 @@
 """
-Implementation of https://openid.net/specs/openid-connect-discovery-1_0-final.html
+Implementation of https://openid.net/specs/openid-connect-discovery-1_0-final.html.
 """
 
 from pathlib import PurePosixPath
@@ -21,7 +21,7 @@ class MetadataResolver(BaseMetadataResolver[Metadata]):
     @classmethod
     def _transform_url(cls, url: URL) -> URL:
         """
-        Normalize url to _well_known path
+        Normalize url to _well_known path.
 
         If `url` already contains `.well-known/openid-configuration` don't do anything to url
 

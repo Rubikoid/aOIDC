@@ -1,9 +1,9 @@
 """
-Helper module for passing validation context
+Helper module for passing validation context.
 """
 
-from dataclasses import dataclass, field
 from collections.abc import Sequence
+from dataclasses import dataclass, field
 
 from httpx import URL
 

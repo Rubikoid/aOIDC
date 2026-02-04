@@ -1,9 +1,9 @@
 """
-Implementation of https://datatracker.ietf.org/doc/html/rfc8414#section-3
+Implementation of https://datatracker.ietf.org/doc/html/rfc8414#section-3.
 """
 
+from collections.abc import Sequence
 from pathlib import PurePosixPath
-from typing import Sequence
 
 from httpx import URL, AsyncClient
 
@@ -22,7 +22,7 @@ class BaseMetadataResolver[M: Metadata]:
     @classmethod
     def _transform_url(cls, url: URL) -> URL:
         """
-        Normalize url to _well_known path
+        Normalize url to _well_known path.
 
         If `url` already contains `.well-known/oauth-authorization-server` don't do anything to url
 
@@ -46,7 +46,7 @@ class BaseMetadataResolver[M: Metadata]:
         whitelisted_urls: Sequence[URL] = [],
     ) -> M:
         """
-        Resolve oauth metadata from remote server using `client`
+        Resolve oauth metadata from remote server using `client`.
 
         Uses url tranformation via `_transform_url`
 

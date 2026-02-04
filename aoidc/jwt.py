@@ -1,10 +1,9 @@
-# ruff: noqa: S105
 from enum import StrEnum
 
 
 class JsonWebAlgos(StrEnum):
     """
-    https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
+    https://datatracker.ietf.org/doc/html/rfc7518#section-3.1.
 
     + https://datatracker.ietf.org/doc/html/rfc9864#section-2.2
     """

@@ -1,7 +1,5 @@
-from typing import NewType, Self
-from urllib.parse import urlparse
+from typing import Self
 
-from msgspec import Struct
 from pydantic import BaseModel, model_validator
 from pydantic.networks import AnyUrl
 
@@ -21,7 +19,7 @@ from .subtypes import (
 
 class Metadata(BaseModel):
     """
-    Metadata list, as defined in https://datatracker.ietf.org/doc/html/rfc8414#section-2
+    Metadata list, as defined in https://datatracker.ietf.org/doc/html/rfc8414#section-2.
     """
 
     issuer: ValidatedIssuer
@@ -135,7 +133,7 @@ class Metadata(BaseModel):
     [RFC5646].  If omitted, the set of supported languages and scripts
     is unspecified.
 
-    TODO: make here proper type 
+    TODO: make here proper type
     """
 
     op_policy_uri: AnyUrl | None = None
@@ -288,7 +286,7 @@ class Metadata(BaseModel):
                 or TokenEndpointAuthMetod.CLIENT_SECRET_JWT in auth_methods_supported
             ) and not auth_signing_alg_values_supported:
                 raise GenericValidationError(
-                    f"{field_part = }: {auth_methods_supported = } but {auth_signing_alg_values_supported = }"
+                    f"{field_part = }: {auth_methods_supported = } but {auth_signing_alg_values_supported = }",
                 )
 
         return self

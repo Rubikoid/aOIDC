@@ -1,14 +1,12 @@
 import datetime
-import typing
 from collections.abc import Mapping, Sequence
 
-from httpx import URL, AsyncClient, Response
+from httpx import URL
 from joserfc import jwt
 from pydantic import AnyUrl
 
 from aoidc.errors import GenericOIDCError
 from aoidc.oauth2.client import BaseOAuth2Client
-from aoidc.oauth2.enums import ResponseType
 from aoidc.oauth2.rfc_6749_oauth.models import AccessToken
 from aoidc.utils import BearerAuth, transform_url, utc_now
 
@@ -112,7 +110,7 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
         extra_data: Mapping[str, str] = {},
     ) -> URL:
         """
-        redirect_uri can't be None
+        redirect_uri can't be None.
         """
 
         if "openid" not in scopes:

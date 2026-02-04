@@ -7,14 +7,14 @@ from pydantic import BeforeValidator
 """
 Taken from https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml as of 11.03.2025
 
-Defined here, instead of RFCs, because of extending among many RFCs, and I don't want to define state for 
+Defined here, instead of RFCs, because of extending among many RFCs, and I don't want to define state for
 each RFC
 """
 
 
 class ResponseType(StrEnum):
     """
-    https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#endpoint
+    https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#endpoint.
 
     Несмотря на то, что в стандарте написаны конкретные комбинации,
     некоторые IdP (например, ory hydra) возвращает конструкции вида `token id_token` и `token id_token code`
@@ -32,7 +32,9 @@ class ResponseType(StrEnum):
     ID_TOKEN = "id_token"
 
 
-def reconstruct_response_types(data: Any) -> set[tuple[ResponseType, ...]]:
+def reconstruct_response_types(
+    data: Any,  # noqa: ANN401
+) -> set[tuple[ResponseType, ...]]:
     if not isinstance(data, list) or any(not isinstance(i, str) for i in data):
         raise ValueError("Invalid ResponseTypes input")
 
@@ -53,7 +55,7 @@ ResponseTypes = Annotated[
 
 class AccessTokenTypes(StrEnum):
     """
-    https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#token-types
+    https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#token-types.
     """
 
     BEARER = "Bearer"
@@ -65,7 +67,7 @@ class AccessTokenTypes(StrEnum):
 
 class TokenEndpointAuthMetod(StrEnum):
     """
-    https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#token-endpoint-auth-method
+    https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#token-endpoint-auth-method.
     """
 
     NONE = "none"
@@ -81,7 +83,7 @@ class TokenEndpointAuthMetod(StrEnum):
 
 class CodeChallendeMethods(StrEnum):
     """
-    https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#pkce-code-challenge-method
+    https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#pkce-code-challenge-method.
     """
 
     PLAIN = "plain"

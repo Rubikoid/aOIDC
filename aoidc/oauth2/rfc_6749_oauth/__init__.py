@@ -1,4 +1,3 @@
 """
-Implementation of https://datatracker.ietf.org/doc/html/rfc6749
+Implementation of https://datatracker.ietf.org/doc/html/rfc6749.
 """
-

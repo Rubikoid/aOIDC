@@ -6,7 +6,7 @@ from pydantic import AnyUrl
 
 from aoidc import __version__
 from aoidc.errors import GenericOAuthError
-from ..oidc.discovery import MetadataResolver
+from aoidc.oidc.discovery import MetadataResolver
 from aoidc.utils import transform_url
 
 from .enums import ResponseType
@@ -93,7 +93,7 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
         extra_data: Mapping[str, str] = {},
     ) -> URL:
         """
-        Create URL to pass to resource owner's user-agent
+        Create URL to pass to resource owner's user-agent.
 
         redirect_uri can be None, but you have to explicitly pass it.
         """

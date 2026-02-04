@@ -1,9 +1,7 @@
 # ruff: noqa: D401
 from typing import Annotated, NewType
-from urllib.parse import urlparse
 
-from pydantic import AfterValidator, AnyUrl, UrlConstraints, ValidationInfo
-from pydantic_core import Url
+from pydantic import AfterValidator, AnyUrl, ValidationInfo
 
 from aoidc.config import settings
 from aoidc.errors import GenericValidationError
@@ -38,7 +36,7 @@ def check_for_allowned_urls(endpoint: AnyUrl, info: ValidationInfo) -> None:
 
 def generic_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl:
     """
-    https check is not debug
+    Https check is not debug.
     """
 
     if endpoint.scheme != "https" and not settings.ALLOW_HTTP:
@@ -118,11 +116,15 @@ def token_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl:
 
 def json_web_algos_validator(algos: set[JsonWebAlgos]) -> set[JsonWebAlgos]:
     """
-    OPTIONAL.  JSON array containing a list of the JWS signing
+    OPTIONAL.
+
+    JSON array containing a list of the JWS signing
     algorithms ("alg" values) supported by the token endpoint for the
     signature on the JWT [JWT] used to authenticate the client at the
     token endpoint for the "private_key_jwt" and "client_secret_jwt"
-    authentication methods.  This metadata entry MUST be present if
+    authentication methods.
+
+    This metadata entry MUST be present if
     either of these authentication methods are specified in the
     "token_endpoint_auth_methods_supported" entry.  No default
     algorithms are implied if this entry is omitted.  Servers SHOULD

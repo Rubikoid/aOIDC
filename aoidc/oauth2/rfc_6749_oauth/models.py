@@ -1,4 +1,5 @@
 from typing import NewType
+
 from pydantic import BaseModel, ConfigDict
 
 from aoidc.oauth2.enums import AccessTokenTypes
@@ -9,7 +10,7 @@ AccessToken = NewType("AccessToken", str)
 
 class TokenResponse(BaseModel):
     """
-    Token response model, as defined in https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
+    Token response model, as defined in https://datatracker.ietf.org/doc/html/rfc6749#section-5.1.
     """
 
     access_token: AccessToken
