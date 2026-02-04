@@ -7,6 +7,7 @@ Suckless implementation of [OpenID Connect Core](https://openid.net/specs/openid
 Also implemented:
 
 - [ ] [RFC 6749](https://datatracker.ietf.org/doc/html/rfc6749): The OAuth 2.0 Authorization Framework
+  - [x] Authorization code flow
 - [ ] [RFC 7033](https://datatracker.ietf.org/doc/html/rfc7033): WebFinger
 - [ ] [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591): OAuth 2.0 Dynamic Client Registration Protocol - **partically**
 - [ ] [RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636): Proof Key for Code Exchange by OAuth Public Clients
@@ -15,6 +16,8 @@ Also implemented:
   - [x] Metadata model
   - [x] `/.well-known/oauth-authorization-server` request
 - [ ] [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0-final.html)
+  - [x] ID Token model
+  - [x] Authorization code flow
 - [ ] [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0-final.html)
   - [ ] WebFinger discovery
   - [x] Model

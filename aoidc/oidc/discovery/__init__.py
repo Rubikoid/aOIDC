@@ -1,37 +1,43 @@
 """
-Implements https://openid.net/specs/openid-connect-discovery-1_0-final.html
+Implementation of https://openid.net/specs/openid-connect-discovery-1_0-final.html
 """
 
-from httpx import URL, AsyncClient
+from pathlib import PurePosixPath
 
-from aoidc.oauth2.context import ValidationContext
+from httpx import URL
+
+from aoidc.oauth2.rfc_8414_server_metadata.resolver import BaseMetadataResolver
 
 from .metadata import Metadata
 
 
-async def resolve_metadata(client: AsyncClient, url: URL) -> Metadata:
+class MetadataResolver(BaseMetadataResolver[Metadata]):
+    @classmethod
+    def _metadata_cls(cls) -> type[Metadata]:
+        return Metadata
+
     _well_known = ".well-known/openid-configuration"
 
-    # В https://datatracker.ietf.org/doc/html/rfc8414#section-3.1 пишут, что имеющийся путь надо приколачивать
-    # ПОСЛЕ `.well-known/openid-configuration`
-    # В https://openid.net/specs/openid-connect-discovery-1_0-final.html#ProviderConfigurationRequest пишут, что
-    # имеющийся путь надо приколачивать ДО `.well-known/openid-configuration`
-    # я лично рот шатал авторов этих стандартов, которые сам себе противоречат, поэтому принимаем соломоново решениие и
-    # 1) просто полностью игнорируем исходный путь, если в нём нет well-known заклинания
-    # 2) если же оно есть - считаем, что пользователь библиотеки умный и знает, куда надо ходить за конфигом
-    # TODO: https://datatracker.ietf.org/doc/html/rfc8414#section-5
+    @classmethod
+    def _transform_url(cls, url: URL) -> URL:
+        """
+        Normalize url to _well_known path
 
-    if not url.path or _well_known not in url.path:
-        url = url.copy_with(path=_well_known)
+        If `url` already contains `.well-known/openid-configuration` don't do anything to url
 
-    response = await client.get(url)
+        If `url` does not contains path - sets path to `.well-known/openid-configuration`
 
-    parsed_metadata = Metadata.model_validate_json(
-        response.text,
-        context=ValidationContext(
-            origin_url=url,
-            allowed_urls=[],  # TODO: pass value here
-        ),
-    )
+        If `url` contains any other path - formats as `/{path}/.well-known/openid-configuration`
 
-    return parsed_metadata
+        ref: https://datatracker.ietf.org/doc/html/rfc8414#section-5
+        ref: https://openid.net/specs/openid-connect-discovery-1_0-final.html#ProviderConfigurationRequest
+        """
+
+        if not url.path or cls._well_known not in url.path:
+            url = url.copy_with(
+                path=str(
+                    PurePosixPath(url.path) / PurePosixPath(cls._well_known),
+                ),  # PurePosixPath is a creative solution...
+            )
+
+        return url
