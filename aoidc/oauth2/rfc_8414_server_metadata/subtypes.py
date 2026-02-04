@@ -138,7 +138,7 @@ def json_web_algos_validator(algos: set[JsonWebAlgos]) -> set[JsonWebAlgos]:
     return algos
 
 
-ValidatedGenericEndpoint = Annotated[Issuer, AfterValidator(generic_endpoint_validator)]
+ValidatedGenericEndpoint = Annotated[AnyUrl, AfterValidator(generic_endpoint_validator)]
 
 ValidatedIssuer = Annotated[Issuer, AfterValidator(issuer_validator)]
 ValidatedAuthorizationEndpoint = Annotated[AnyUrl, AfterValidator(authorization_endpoint_validator)]

@@ -12,9 +12,12 @@ from aoidc.oauth2.context import ValidationContext
 from .metadata import Metadata
 
 
-class MetadataResolver:
-    _metadata: type[Metadata] = Metadata
+class BaseMetadataResolver[M: Metadata]:
     _well_known = ".well-known/oauth-authorization-server"
+
+    @classmethod
+    def _metadata_cls(cls) -> type[M]:
+        raise NotImplementedError
 
     @classmethod
     def _transform_url(cls, url: URL) -> URL:
@@ -41,7 +44,7 @@ class MetadataResolver:
         client: AsyncClient,
         url: URL,
         whitelisted_urls: Sequence[URL] = [],
-    ) -> Metadata:
+    ) -> M:
         """
         Resolve oauth metadata from remote server using `client`
 
@@ -52,8 +55,9 @@ class MetadataResolver:
 
         url = cls._transform_url(url)
         response = await client.get(url)
+        response.raise_for_status()
 
-        parsed_metadata = cls._metadata.model_validate_json(
+        parsed_metadata = cls._metadata_cls().model_validate_json(
             response.text,
             context=ValidationContext(
                 origin_url=url,
@@ -62,3 +66,9 @@ class MetadataResolver:
         )
 
         return parsed_metadata
+
+
+class MetadataResolver(BaseMetadataResolver[Metadata]):
+    @classmethod
+    def _metadata_cls(cls) -> type[Metadata]:
+        return Metadata

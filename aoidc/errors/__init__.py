@@ -10,4 +10,7 @@ class GenericValidationError(ValueError, GenericError):
     pass
 
 
+class GenericOAuthError(GenericError): ...
+
+
 class GenericOIDCError(GenericError): ...
