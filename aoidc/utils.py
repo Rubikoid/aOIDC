@@ -1,5 +1,11 @@
-from pydantic import AnyUrl
-from httpx import URL
+from collections.abc import Generator
+import datetime
+from typing import Annotated
+
+from httpx import URL, Auth, Request, Response
+from pydantic import AnyUrl, AwareDatetime
+
+UTCTime = Annotated[AwareDatetime, ...]
 
 
 def is_same_origin(url_1: str | AnyUrl | URL, url_2: str | AnyUrl | URL) -> bool:
@@ -22,6 +28,26 @@ def transform_url(url: str | AnyUrl | URL) -> URL:
     if isinstance(url, AnyUrl):
         return URL(url.unicode_string())
     return URL(url)
+
+
+def utc_now() -> UTCTime:
+    return datetime.datetime.now(datetime.UTC)
+
+
+class BearerAuth(Auth):
+    """
+    ...
+    """
+
+    def __init__(self, token: str) -> None:
+        self._auth_header = self._build_auth_header(token)
+
+    def auth_flow(self, request: Request) -> Generator[Request, Response, None]:
+        request.headers["Authorization"] = self._auth_header
+        yield request
+
+    def _build_auth_header(self, token) -> str:
+        return f"Bearer {token}"
 
 
 # def patch_url(
