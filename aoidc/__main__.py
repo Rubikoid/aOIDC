@@ -1,7 +1,7 @@
 import asyncio
+import json
 import logging
 import secrets
-import subprocess
 
 import h11
 import structlog
@@ -14,16 +14,13 @@ structlog.stdlib.recreate_defaults()
 log = get_logger("test")
 logging.getLogger("httpcore").setLevel(logging.ERROR)
 
-public_tests = [
-    (
-        "1",
-        "A",
-        "https://www.certification.openid.net/test/a/aoidc-test/.well-known/openid-configuration",
-    ),
-]
+raw_provider = json.loads(open("testing.json").read())[-1]
+CLIENT_ID = raw_provider["client_id"]
+CLIENT_SECRET = raw_provider["client_secret"]
+DISCOVERY = raw_provider["url"]
 
 
-async def run_handler(*, port: int) -> tuple[int, asyncio.Future[str], asyncio.Task]:
+async def run_handler(*, port: int) -> tuple[int, asyncio.Future[str], asyncio.Task]:  # noqa: C901, PLR0915
     MAX_RECV = 2**16
     TIMEOUT = 10
 
@@ -121,40 +118,41 @@ async def run_handler(*, port: int) -> tuple[int, asyncio.Future[str], asyncio.T
 
 
 async def main():
-    for CLIENT_ID, CLIENT_SECRET, DISCOVERY in public_tests:
-        client = OIDCClient(discovery_endpoint=DISCOVERY, client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
-        await client.init()
+    # for CLIENT_ID, CLIENT_SECRET, DISCOVERY in public_tests:
+    client = OIDCClient(discovery_endpoint=DISCOVERY, client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
+    await client.init()
 
-        port, future, w = await run_handler(port=9999)
+    port, future, w = await run_handler(port=9999)
 
-        redirect_uri = f"http://127.0.0.1:{port}"
-        state = secrets.token_urlsafe(nbytes=16)
+    redirect_uri = f"http://127.0.0.1:{port}"
+    state = secrets.token_urlsafe(nbytes=16)
 
-        auth_link = await client.authorization_code_flow_start(redirect_uri=redirect_uri, state=state)
-        log.warning("Starting auth code flow with", link=auth_link)
+    auth_link = await client.authorization_code_flow_start(redirect_uri=redirect_uri, state=state)
+    log.warning("Starting auth code flow with", link=auth_link)
 
-        subprocess.run(
-            [
-                "/mnt/c/Program Files/Vivaldi/Application/vivaldi.exe",
-                str(auth_link),
-            ],
-        )
+    # subprocess.run(
+    #     [
+    #         "/mnt/c/Program Files/Vivaldi/Application/vivaldi.exe",
+    #         str(auth_link),
+    #     ],
+    # )
+    # input("..?")
 
-        # link = input("Enter link: ")
-        link = await future
-        parsed_link = URL(link)
+    # link = input("Enter link: ")
+    link = await future
+    parsed_link = URL(link)
 
-        token = await client.authorization_code_flow_continue(
-            code=parsed_link.params["code"],
-            state=parsed_link.params["state"],
-            redirect_uri=redirect_uri,
-        )
+    token = await client.authorization_code_flow_continue(
+        code=parsed_link.params["code"],
+        state=parsed_link.params["state"],
+        redirect_uri=redirect_uri,
+    )
 
-        id_token = await client.authorization_code_flow_finalize(token)
-        log.info("ID token", id_token=id_token)
+    id_token = await client.authorization_code_flow_finalize(token)
+    log.info("ID token", id_token=id_token)
 
-        userinfo = await client.userinfo(token.access_token)
-        log.info("userinfo", userinfo=userinfo)
+    userinfo = await client.userinfo(token.access_token)
+    log.info("userinfo", userinfo=userinfo)
 
 
 if __name__ == "__main__":
