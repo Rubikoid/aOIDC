@@ -8,6 +8,7 @@ Also implemented:
 
 - [ ] [RFC 6749](https://datatracker.ietf.org/doc/html/rfc6749): The OAuth 2.0 Authorization Framework
   - [x] Authorization code flow
+  - [ ] Request with client_credentials grant
 - [ ] [RFC 7033](https://datatracker.ietf.org/doc/html/rfc7033): WebFinger
 - [ ] [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591): OAuth 2.0 Dynamic Client Registration Protocol - **partically**
 - [ ] [RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636): Proof Key for Code Exchange by OAuth Public Clients
@@ -28,8 +29,12 @@ Also implemented:
 Core functional that I need from such library is simple client authentication via authorization code flow, so this will be implemented first.
 
 1. [ ] OIDC Client for `CODE` flow
+   1. [x] Basic flow
+   2. [ ] Nonce
 2. [ ] OIDC Client for `PKCE` flow
 3. [ ] OIDC Client for token verification
+   1. [x] Basic token verification
+   2. [ ] Advanced token verification
 4. [ ] OIDC Client for `client_credentials` flow
 
 ## Motivation

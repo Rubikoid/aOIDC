@@ -169,3 +169,7 @@ cython_debug/
 
 # VSCode
 .vscode/
+
+CLAUDE.md
+.ruff_cache
+testing.json
