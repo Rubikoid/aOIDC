@@ -157,6 +157,24 @@ class GenericIDToken(BaseModel):
         extra="allow",
     )
 
+    @property
+    def semiuniq_field(self) -> str:
+        """
+        Function guarantees, that will return SOME **SEMI**-uniq field.
+        It means that in 99.9% this field will be really uniq.
+
+        Function IS NOT standard and can be changed or removed.
+        """
+
+        if self.model_extra:
+            if (pref_username := self.model_extra.get("preferred_username", None)) is not None:
+                return pref_username
+
+            if (email := self.model_extra.get("email", None)) is not None:
+                return email
+
+        return f"Generic {self.iss}/{self.sub}"
+
 
 class BaseTokenResponse(OAuthTokenResponse):
     id_token: str
