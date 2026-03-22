@@ -90,36 +90,43 @@ in
     provision = {
       enable = true;
 
-      idmAdminPasswordFile = pkgs.writeText "kanidm-idm-admin-pw" ''1'';
-      adminPasswordFile = pkgs.writeText "kanidm-admin-pw" ''1'';
+      idmAdminPasswordFile = pkgs.writeText "kanidm-idm-admin-pw" "1";
+      adminPasswordFile = pkgs.writeText "kanidm-admin-pw" "1";
 
       groups.aoidc_users = {
         present = true;
         members = [
-          "admin"
+          # "admin"
         ];
       };
 
-      persons.rubikoid = {
-        present = true;
-        displayName = "Rubikoid";
-        legalName = "Rubikoid Rubikoiov Rubikoidovich";
-        mailAddresses = [
-          "rubikoid@localhost"
-          "rubikoid@rubikoid.ru"
-        ];
-        groups = [
-          "aoidc_users"
-        ];
-        # pw = 8fcg4i3tc345i
-        # totp...
+      persons = {
+        # admin = {
+        #   present = true;
+        #   displayName = "Admin";
+        # };
+
+        rubikoid = {
+          present = true;
+          displayName = "Rubikoid";
+          legalName = "R R R";
+          mailAddresses = [
+            "rubikoid@localhost"
+            "rubikoid@rubikoid.ru"
+          ];
+          groups = [
+            "aoidc_users"
+          ];
+          # pw = 8fcg4i3tc345i
+          # totp...
+        };
       };
 
       systems.oauth2.aoidc = {
         present = true;
 
         displayName = "aOIDC Testing App";
-        basicSecretFile = pkgs.writeText "aoidc-secret" ''1337'';
+        basicSecretFile = pkgs.writeText "aoidc-secret" "1337";
 
         originUrl = "http://127.0.0.1:9999";
         originLanding = "http://127.0.0.1:9999/wtf";
@@ -148,6 +155,43 @@ in
       log_level = "debug";
 
       bindaddress = "[::]:${toString port}";
+    };
+  };
+
+  systemd.services.kanidm-postinit = {
+    wantedBy = [ "multi-user.target" ];
+    after = [
+      "network-online.target"
+      "kanidm.service"
+    ];
+    requires = [ "kanidm.service" ];
+
+    script = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      # Wait for the kanidm server to come online
+      count=0
+      while ! ${lib.getExe pkgs.curl} -L --silent --max-time 1 --connect-timeout 1 --fail \
+        ${config.services.kanidm.provision.instanceUrl} >/dev/null
+      do
+        sleep 1
+        if [[ "$count" -eq 30 ]]; then
+          echo "Tried for at least 30 seconds, giving up..."
+          exit 1
+        fi
+        count=$((++count))
+      done
+
+      ${config.services.kanidm.package}/bin/kanidm login -D idm_admin --password "1"
+      ${config.services.kanidm.package}/bin/kanidm group add-members aoidc_users admin
+      ${config.services.kanidm.package}/bin/kanidm system oauth2 add-redirect-url aoidc http://127.0.0.1:9999/docs/oauth2-redirect
+    '';
+
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = "yes";
+      TimeoutStartSec = "0";
     };
   };
 }
