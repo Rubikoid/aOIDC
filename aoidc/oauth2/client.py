@@ -1,3 +1,4 @@
+import datetime
 from collections.abc import Mapping, Sequence
 
 from httpx import URL, AsyncClient, BasicAuth
@@ -5,6 +6,8 @@ from joserfc.jwk import KeySet
 from pydantic import AnyUrl
 
 from aoidc import __version__
+from aoidc.config import ProcessingSettings
+from aoidc.config import settings as global_settings
 from aoidc.errors import GenericOAuthError
 from aoidc.oidc.discovery import MetadataResolver
 from aoidc.utils import transform_url
@@ -26,8 +29,11 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
 
     metadata: M
     keyset: KeySet | None = None
+    keyset_update: datetime.datetime | None = None
 
     pass_client_secret_in_body: bool = False
+
+    settings: ProcessingSettings
     """
     Pass client_secret in POST body instead of HTTP Basic Auth
 
@@ -54,10 +60,13 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
         client_id: str | None = None,
         client_secret: str | None = None,
         client: AsyncClient | None = None,
+        settings: ProcessingSettings | None = None,
     ) -> None:
-        self._client = client or AsyncClient()
+        self.settings = settings or global_settings
+
+        self._client = client or AsyncClient(verify=not self.settings.DEFAULT_CLIENT_NO_VERIFY)
         self._client.headers["User-Agent"] = f"aoidc/{__version__}"
-        self._client.follow_redirects = False  # TODO: check, is this a good idea...
+        self._client.follow_redirects = self.settings.FOLLOW_REDIRECTS  # TODO: check, is this a good idea...
 
         if isinstance(discovery_endpoint, AnyUrl):
             self.discovery_endpoint = transform_url(discovery_endpoint)
@@ -72,15 +81,26 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
 
     async def resolve_metadata(self) -> None:
         self.metadata = await self.meta_resolver().resolve_metadata(
-            self._client,
-            self.discovery_endpoint,
+            client=self._client,
+            url=self.discovery_endpoint,
+            settings=self.settings,
             # TODO: whitelist pass
         )
 
         if self.metadata.jwks_uri:
-            jwks_resp = await self._client.get(str(self.metadata.jwks_uri))
-            jwks_resp.raise_for_status()
-            self.keyset = KeySet.import_key_set(jwks_resp.json())
+            await self.refresh_keyset()
+
+    async def refresh_keyset(self) -> None:
+        # TODO: make it config
+        now = datetime.datetime.now(datetime.UTC)
+        if self.keyset_update and (now - self.keyset_update) < datetime.timedelta(minutes=5):
+            return
+
+        jwks_resp = await self._client.get(str(self.metadata.jwks_uri))
+        jwks_resp.raise_for_status()
+
+        self.keyset = KeySet.import_key_set(jwks_resp.json())
+        self.keyset_update = now
 
     async def authorization_code_flow_start(
         self,

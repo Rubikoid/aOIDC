@@ -3,7 +3,6 @@ from typing import Annotated, NewType
 
 from pydantic import AfterValidator, AnyUrl, ValidationInfo
 
-from aoidc.config import settings
 from aoidc.errors import GenericValidationError
 from aoidc.jwt import JsonWebAlgos
 from aoidc.oauth2.context import ValidationContext
@@ -18,11 +17,11 @@ def check_for_allowned_urls(endpoint: AnyUrl, info: ValidationInfo) -> None:
     # адреса, возвращаемые в .well-known должны вести либо на такой же Origin, как и сам .well-known
     # либо быть в отдельном явно прописанном списке избранных адресов
 
-    if settings.ALLOW_ALL_URLS:
-        return
-
     ctx = info.context
     if not isinstance(ctx, ValidationContext):
+        raise TypeError("Invalid context, passed to validator")
+
+    if ctx.settings.ALLOW_ALL_URLS:
         return
 
     if is_same_origin(endpoint, ctx.origin_url):
@@ -39,7 +38,11 @@ def generic_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl
     Https check is not debug.
     """
 
-    if endpoint.scheme != "https" and not settings.ALLOW_HTTP:
+    ctx = info.context
+    if not isinstance(ctx, ValidationContext):
+        raise TypeError("Invalid context, passed to validator")
+
+    if endpoint.scheme != "https" and not ctx.settings.ALLOW_HTTP:
         raise GenericValidationError("Invalid endpoint")
 
     check_for_allowned_urls(endpoint, info)
@@ -59,7 +62,11 @@ def issuer_validator(issuer: Issuer, info: ValidationInfo) -> Issuer:
     [MIX-UP].
     """
 
-    if (issuer.scheme != "https" and not settings.ALLOW_HTTP) or issuer.query or issuer.fragment:
+    ctx = info.context
+    if not isinstance(ctx, ValidationContext):
+        raise TypeError("Invalid context, passed to validator")
+
+    if (issuer.scheme != "https" and not ctx.settings.ALLOW_HTTP) or issuer.query or issuer.fragment:
         raise GenericValidationError("Invalid issuer")
 
     check_for_allowned_urls(issuer, info)
@@ -83,7 +90,11 @@ def authorization_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> 
     https://datatracker.ietf.org/doc/html/rfc6749#section-3.1
     """
 
-    if (endpoint.scheme != "https" and not settings.ALLOW_HTTP) or endpoint.fragment:
+    ctx = info.context
+    if not isinstance(ctx, ValidationContext):
+        raise TypeError("Invalid context, passed to validator")
+
+    if (endpoint.scheme != "https" and not ctx.settings.ALLOW_HTTP) or endpoint.fragment:
         raise GenericValidationError("Invalid endpoint")
 
     check_for_allowned_urls(endpoint, info)
@@ -106,7 +117,11 @@ def token_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl:
     https://datatracker.ietf.org/doc/html/rfc6749#section-3.1
     """
 
-    if (endpoint.scheme != "https" and not settings.ALLOW_HTTP) or endpoint.fragment:
+    ctx = info.context
+    if not isinstance(ctx, ValidationContext):
+        raise TypeError("Invalid context, passed to validator")
+
+    if (endpoint.scheme != "https" and not ctx.settings.ALLOW_HTTP) or endpoint.fragment:
         raise GenericValidationError("Invalid endpoint")
 
     check_for_allowned_urls(endpoint, info)
@@ -114,7 +129,7 @@ def token_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl:
     return endpoint
 
 
-def json_web_algos_validator(algos: set[JsonWebAlgos]) -> set[JsonWebAlgos]:
+def json_web_algos_validator(algos: set[JsonWebAlgos], info: ValidationInfo) -> set[JsonWebAlgos]:
     """
     OPTIONAL.
 
@@ -131,10 +146,14 @@ def json_web_algos_validator(algos: set[JsonWebAlgos]) -> set[JsonWebAlgos]:
     support "RS256".  The value "none" MUST NOT be used.
     """
 
+    ctx = info.context
+    if not isinstance(ctx, ValidationContext):
+        raise TypeError("Invalid context, passed to validator")
+
     if JsonWebAlgos.RS256 not in algos:
         raise GenericValidationError("RS256 is not supported")
 
-    if not settings.ALLOW_ALG_NONE and JsonWebAlgos.NONE in algos:
+    if not ctx.settings.ALLOW_ALG_NONE and JsonWebAlgos.NONE in algos:
         raise GenericValidationError("NONE alg is supported")
 
     return algos

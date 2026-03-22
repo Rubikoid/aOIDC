@@ -7,6 +7,7 @@ from pathlib import PurePosixPath
 
 from httpx import URL, AsyncClient
 
+from aoidc.config import ProcessingSettings
 from aoidc.oauth2.context import ValidationContext
 
 from .metadata import Metadata
@@ -43,6 +44,7 @@ class BaseMetadataResolver[M: Metadata]:
         cls,
         client: AsyncClient,
         url: URL,
+        settings: ProcessingSettings,
         whitelisted_urls: Sequence[URL] = [],
     ) -> M:
         """
@@ -62,6 +64,7 @@ class BaseMetadataResolver[M: Metadata]:
             context=ValidationContext(
                 origin_url=url,
                 allowed_urls=whitelisted_urls,
+                settings=settings,
             ),
         )
 

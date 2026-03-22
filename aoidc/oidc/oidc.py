@@ -3,9 +3,10 @@ from collections.abc import Mapping, Sequence
 
 from httpx import URL
 from joserfc import jwt
+from joserfc.errors import BadSignatureError
 from pydantic import AnyUrl
 
-from aoidc.errors import GenericOIDCError
+from aoidc.errors import GenericOIDCError, TokenValidationError
 from aoidc.oauth2.client import BaseOAuth2Client
 from aoidc.oauth2.rfc_6749_oauth.models import AccessToken
 from aoidc.utils import BearerAuth, transform_url, utc_now
@@ -18,16 +19,32 @@ from .models import GenericIDToken, TokenResponse
 class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOAuth2Client[T, M, MR]):
     trusted_auds: Sequence[str] = []
 
-    async def validate_id_token[IDT: GenericIDToken](
+    async def _token_decode(self, token: str | bytes, repeat: int = 0) -> jwt.Token:
+        """
+        Intellectually decode token even when IDP's JWK keys gets updated.
+        """
+        if repeat > 1:
+            raise TokenValidationError("Invalid signature")
+
+        if not self.keyset:
+            raise GenericOIDCError("No keyset")
+
+        try:
+            return jwt.decode(
+                token,
+                self.keyset,
+            )
+        except BadSignatureError:
+            await self.refresh_keyset()
+            return await self._token_decode(token, repeat=repeat + 1)
+
+    async def validate_id_token[IDT: GenericIDToken](  # sadly there is no better ways
         self,
         token: str,
         /,
         *,
-        token_cls: type[IDT] = GenericIDToken,
+        token_cls: type[IDT] = GenericIDToken,  # ty:ignore[invalid-parameter-default]
     ) -> IDT:
-        if not self.keyset:
-            raise GenericOIDCError("No keyset")
-
         if not self.CLIENT_ID:
             raise GenericOIDCError("No client_id")
 
@@ -35,44 +52,42 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
 
         # TODO: registry?
         # TODO: alg verification (p7 https://openid.net/specs/openid-connect-core-1_0-final.html#IDTokenValidation)
-        raw_token = jwt.decode(
-            token,
-            self.keyset,
-        )
+        raw_token = await self._token_decode(token)
 
         # run pydantic validators
         parsed_token = token_cls.model_validate(raw_token.claims)
         now = utc_now()
 
         # check issuer
-        if parsed_token.iss != self.metadata.issuer:
-            raise GenericOIDCError("Invalid `iss` in token")
+        if not self.settings.DISALBE_TOKEN_ISSUER_CHECK and parsed_token.iss != self.metadata.issuer:
+            raise TokenValidationError("Invalid `iss` in token")
 
-        # check aud
-        if isinstance(parsed_token.aud, str):
-            if parsed_token.aud != self.CLIENT_ID:
-                raise GenericOIDCError("Untrusted `aud` in token")
-        else:
-            full_trusted_auds = set(self.trusted_auds) | {self.CLIENT_ID}
-            auds_diff = parsed_token.aud - full_trusted_auds
-            if self.CLIENT_ID not in parsed_token.aud or len(auds_diff) > 0:
-                raise GenericOIDCError("Untrusted `aud` entry in token")
+        if not self.settings.DISALBE_TOKEN_AUDIENCE_CHECK:
+            # check aud
+            if isinstance(parsed_token.aud, str):
+                if parsed_token.aud != self.CLIENT_ID:
+                    raise TokenValidationError("Untrusted `aud` in token")
+            else:
+                full_trusted_auds = set(self.trusted_auds) | {self.CLIENT_ID}
+                auds_diff = parsed_token.aud - full_trusted_auds
+                if self.CLIENT_ID not in parsed_token.aud or len(auds_diff) > 0:
+                    raise TokenValidationError("Untrusted `aud` entry in token")
 
         # check DTs
-        if parsed_token.exp < now:
-            raise GenericOIDCError("Token expired")
+        if not self.settings.DISALBE_TOKEN_EXPIRY_CHECK and parsed_token.exp < now:
+            raise TokenValidationError("Token expired")
 
         # WTF: это не против стандарта, но концептуально
         # переделать?
-        if (parsed_token.iat - now) > datetime.timedelta(seconds=5):
-            raise GenericOIDCError("Token issued in future")
+        if not self.settings.DISALBE_TOKEN_EXPIRY_CHECK and (parsed_token.iat - now) > datetime.timedelta(seconds=5):
+            raise TokenValidationError("Token issued in future")
 
-        if isinstance(parsed_token.aud, set):
-            if not parsed_token.azp:
-                raise GenericOIDCError("`aud` is list, but `azp` does not present")
-            # TODO: normal check
-            # WTF: https://bitbucket.org/openid/connect/issues/973/
-            # WTF: https://stackoverflow.com/questions/41231018/openid-connect-standard-authorized-party-azp-contradiction
+        # if isinstance(parsed_token.aud, set):
+        #     if not parsed_token.azp:
+        #         raise TokenValidationError("`aud` is list, but `azp` does not present")
+        # TODO: normal check
+        # WTF: https://bitbucket.org/openid/connect/issues/973/
+        # WTF: https://stackoverflow.com/questions/41231018/openid-connect-standard-authorized-party-azp-contradiction
 
         # TODO: check for nonce
 
@@ -150,7 +165,7 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
         token: T,
         /,
         *,
-        token_cls: type[IDT] = GenericIDToken,
+        token_cls: type[IDT] = GenericIDToken,  # ty:ignore[invalid-parameter-default]
     ) -> IDT:
         id_token = await self.validate_id_token(
             token.id_token,
