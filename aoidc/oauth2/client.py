@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 from collections.abc import Mapping, Sequence
 
@@ -34,6 +35,8 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
     pass_client_secret_in_body: bool = False
 
     settings: ProcessingSettings
+
+    __lock: asyncio.Lock
     """
     Pass client_secret in POST body instead of HTTP Basic Auth
 
@@ -76,16 +79,19 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
         self.CLIENT_ID = client_id
         self.CLIENT_SECRET = client_secret
 
+        self.__lock = asyncio.Lock()
+
     async def init(self) -> None:
         await self.resolve_metadata()
 
     async def resolve_metadata(self) -> None:
-        self.metadata = await self.meta_resolver().resolve_metadata(
-            client=self._client,
-            url=self.discovery_endpoint,
-            settings=self.settings,
-            # TODO: whitelist pass
-        )
+        async with self.__lock:
+            self.metadata = await self.meta_resolver().resolve_metadata(
+                client=self._client,
+                url=self.discovery_endpoint,
+                settings=self.settings,
+                # TODO: whitelist pass
+            )
 
         if self.metadata.jwks_uri:
             await self.refresh_keyset()
@@ -96,11 +102,12 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
         if self.keyset_update and (now - self.keyset_update) < datetime.timedelta(minutes=5):
             return
 
-        jwks_resp = await self._client.get(str(self.metadata.jwks_uri))
-        jwks_resp.raise_for_status()
+        async with self.__lock:
+            jwks_resp = await self._client.get(str(self.metadata.jwks_uri))
+            jwks_resp.raise_for_status()
 
-        self.keyset = KeySet.import_key_set(jwks_resp.json())
-        self.keyset_update = now
+            self.keyset = KeySet.import_key_set(jwks_resp.json())
+            self.keyset_update = now
 
     async def authorization_code_flow_start(
         self,
