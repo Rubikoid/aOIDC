@@ -10,7 +10,6 @@ from collections.abc import Sequence
 from enum import Enum, auto
 from typing import Annotated
 
-from annotated_doc import Doc
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.status import HTTP_401_UNAUTHORIZED
