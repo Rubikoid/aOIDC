@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from enum import Enum, auto
 from typing import Annotated
 
+import joserfc.errors
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.status import HTTP_401_UNAUTHORIZED
@@ -127,7 +128,7 @@ class OpenIdConnectBetter[O: BaseOIDCClient, T: GenericIDToken](SecurityBase):
 
         try:
             token = await self.resolve_token(request)
-        except (TokenValidationError, ValueError) as ex:
+        except (joserfc.errors.JoseError, TokenValidationError, ValueError) as ex:
             if self.auto_error:
                 raise self.make_not_authenticated_error() from ex
             return None
