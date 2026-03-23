@@ -10,9 +10,9 @@ from httpx import URL
 from aoidc.config import ProcessingSettings
 
 
-@dataclass(init=True, frozen=True, slots=True)
+@dataclass(init=True, frozen=True, slots=True, kw_only=True)
 class ValidationContext:
-    origin_url: URL
+    origin_url: URL | None = None
 
     settings: ProcessingSettings
 

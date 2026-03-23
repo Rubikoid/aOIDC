@@ -14,3 +14,5 @@ class GrantTypes(StrEnum):
     JWT_BEARER = "urn:ietf:params:oauth:grant-type:jwt-bearer"
     SAML2_BEARER = "urn:ietf:params:oauth:grant-type:saml2-bearer"
     DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code"
+
+    CIBA = "urn:openid:params:grant-type:ciba"

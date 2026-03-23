@@ -8,6 +8,7 @@ from pydantic import AnyUrl
 
 from aoidc.errors import GenericOIDCError, TokenValidationError
 from aoidc.oauth2.client import BaseOAuth2Client
+from aoidc.oauth2.context import ValidationContext
 from aoidc.oauth2.rfc_6749_oauth.models import AccessToken
 from aoidc.utils import BearerAuth, transform_url, utc_now
 
@@ -52,7 +53,14 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
         raw_token = await self._token_decode(token)
 
         # run pydantic validators
-        parsed_token = token_cls.model_validate(raw_token.claims)
+        parsed_token = token_cls.model_validate(
+            raw_token.claims,
+            context=ValidationContext(
+                origin_url=self.discovery_endpoint,
+                allowed_urls=[],  # FIXME: do it.
+                settings=self.settings,
+            ),
+        )
         now = utc_now()
 
         # check issuer

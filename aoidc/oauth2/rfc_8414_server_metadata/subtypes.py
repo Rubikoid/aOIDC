@@ -24,7 +24,7 @@ def check_for_allowned_urls(endpoint: AnyUrl, info: ValidationInfo) -> None:
     if ctx.settings.ALLOW_ALL_URLS:
         return
 
-    if is_same_origin(endpoint, ctx.origin_url):
+    if ctx.origin_url and is_same_origin(endpoint, ctx.origin_url):
         return
 
     if any(is_same_origin(endpoint, i) for i in ctx.allowed_urls):
