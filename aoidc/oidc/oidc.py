@@ -45,9 +45,6 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
         *,
         token_cls: type[IDT] = GenericIDToken,  # ty:ignore[invalid-parameter-default]
     ) -> IDT:
-        if not self.CLIENT_ID:
-            raise GenericOIDCError("No client_id")
-
         # TODO: check for encryption
 
         # TODO: registry?
@@ -63,6 +60,9 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
             raise TokenValidationError("Invalid `iss` in token")
 
         if not self.settings.DISALBE_TOKEN_AUDIENCE_CHECK:
+            if not self.CLIENT_ID:
+                raise GenericOIDCError("No client_id")
+
             # check aud
             if isinstance(parsed_token.aud, str):
                 if parsed_token.aud != self.CLIENT_ID:
