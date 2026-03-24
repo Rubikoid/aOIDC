@@ -7,8 +7,6 @@ except ImportError:
     ) from None
 
 from collections.abc import Sequence
-from enum import Enum, auto
-from typing import Annotated
 
 import joserfc.errors
 from starlette.exceptions import HTTPException
@@ -19,7 +17,7 @@ from aoidc.errors import TokenValidationError
 from aoidc.oauth2.rfc_7591_dynamic_client.enums import GrantTypes
 from aoidc.oidc.discovery.metadata import Metadata
 from aoidc.oidc.models import GenericIDToken
-from aoidc.oidc.oidc import BaseOIDCClient, OIDCClient
+from aoidc.oidc.oidc import BaseOIDCClient
 from fastapi.openapi import models as openapi_models
 from fastapi.security.base import SecurityBase
 from fastapi.security.utils import get_authorization_scheme_param
@@ -54,6 +52,15 @@ class OpenIdConnectBetter[O: BaseOIDCClient, T: GenericIDToken](SecurityBase):
 
         self.scheme_name = scheme_name or self.__class__.__name__
         self.auto_error = auto_error
+
+        # here we have a blue-and-red functions problem.
+        # to define this model properly we need to call init
+        # but without this model swagger ui will not work
+        # so... ewww. TODO: think, how to make this better.
+        self.model = openapi_models.OAuth2(
+            description=f"UNINITIALIZED {self.description}",
+            flows=openapi_models.OAuthFlows(),
+        )
 
     async def init(self) -> None:
         """
