@@ -1,5 +1,7 @@
 from enum import StrEnum
 
+from aoidc.utils import show_unknown_enum_waring
+
 
 class JsonWebAlgos(StrEnum):
     """
@@ -31,3 +33,10 @@ class JsonWebAlgos(StrEnum):
     EDDSA = "EdDSA"
     ED25519 = "Ed25519"
     ED448 = "Ed448"
+
+    _UNKNOWN = "_UNKNOWN"
+
+    @classmethod
+    def _missing_(cls, value):
+        show_unknown_enum_waring(cls.__name__, value)
+        return cls._UNKNOWN

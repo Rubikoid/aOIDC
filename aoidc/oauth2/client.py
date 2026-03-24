@@ -214,7 +214,11 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
             )
 
         token_response.raise_for_status()
-        token = self.token_type().model_validate_json(token_response.text)
+
+        # model_validate_json is broken, lol
+        # https://github.com/pydantic/pydantic/issues/12960
+        json = token_response.json()
+        token = self.token_type().model_validate_json(json)
         return token
 
 

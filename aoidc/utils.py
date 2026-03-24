@@ -1,6 +1,7 @@
 import datetime
+import warnings
 from collections.abc import Generator
-from typing import Annotated
+from typing import Annotated, Any
 
 from httpx import URL, Auth, Request, Response
 from pydantic import AnyUrl, AwareDatetime
@@ -40,6 +41,17 @@ def utc_now() -> UTCTime:
     """
 
     return datetime.datetime.now(datetime.UTC)
+
+
+def show_unknown_enum_waring(enum_name: str, unknown_value: Any) -> None:  # noqa: ANN401
+    warnings.warn(
+        "A new, unknown enum value was detected. "
+        f"Enum: {enum_name!r}, value: {unknown_value!r}. "
+        "Please create an issue at https://github.com/Rubikoid/aOIDC/issues/new "
+        "with a copy of this error and the name or address of the OIDC provider "
+        "you are using so I can add this value to the enum.",
+        stacklevel=2,
+    )
 
 
 class BearerAuth(Auth):

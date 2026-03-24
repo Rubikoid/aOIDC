@@ -59,8 +59,11 @@ class BaseMetadataResolver[M: Metadata]:
         response = await client.get(url)
         response.raise_for_status()
 
-        parsed_metadata = cls._metadata_cls().model_validate_json(
-            response.text,
+        # model_validate_json is broken, lol
+        # https://github.com/pydantic/pydantic/issues/12960
+        json = response.json()
+        parsed_metadata = cls._metadata_cls().model_validate(
+            json,
             context=ValidationContext(
                 origin_url=url,
                 allowed_urls=whitelisted_urls,

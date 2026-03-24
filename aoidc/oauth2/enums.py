@@ -4,6 +4,8 @@ from typing import Annotated, Any
 
 from pydantic import BeforeValidator
 
+from aoidc.utils import show_unknown_enum_waring
+
 """
 Taken from https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml as of 11.03.2025
 
@@ -30,6 +32,13 @@ class ResponseType(StrEnum):
     CODE = "code"
     TOKEN = "token"
     ID_TOKEN = "id_token"
+
+    _UNKNOWN = "_UNKNOWN"
+
+    @classmethod
+    def _missing_(cls, value):
+        show_unknown_enum_waring(cls.__name__, value)
+        return cls._UNKNOWN
 
 
 def reconstruct_response_types(
@@ -64,6 +73,20 @@ class AccessTokenTypes(StrEnum):
     N_A = "N_A"
     PoP = "PoP"
 
+    _UNKNOWN = "_UNKNOWN"
+
+    @classmethod
+    def _missing_(cls, value):
+        # because `introspection_endpoint_auth_methods_supported` in Metadata is
+        # set[TokenEndpointAuthMetod | AccessTokenTypes]
+        # ignore them here
+        # so it will not spam warnings
+        if value in TokenEndpointAuthMetod:
+            return None
+
+        show_unknown_enum_waring(cls.__name__, value)
+        return cls._UNKNOWN
+
 
 class TokenEndpointAuthMetod(StrEnum):
     """
@@ -80,6 +103,20 @@ class TokenEndpointAuthMetod(StrEnum):
     TLS_CLIENT_AUTH = "tls_client_auth"
     SELF_SIGNED_TLS_CLIENT_AUTH = "self_signed_tls_client_auth"
 
+    _UNKNOWN = "_UNKNOWN"
+
+    @classmethod
+    def _missing_(cls, value):
+        # because `introspection_endpoint_auth_methods_supported` in Metadata is
+        # set[TokenEndpointAuthMetod | AccessTokenTypes]
+        # ignore them here
+        # so it will not spam warnings
+        if value in AccessTokenTypes:
+            return None
+
+        show_unknown_enum_waring(cls.__name__, value)
+        return cls._UNKNOWN
+
 
 class CodeChallendeMethods(StrEnum):
     """
@@ -88,3 +125,10 @@ class CodeChallendeMethods(StrEnum):
 
     PLAIN = "plain"
     S256 = "S256"
+
+    _UNKNOWN = "_UNKNOWN"
+
+    @classmethod
+    def _missing_(cls, value):
+        show_unknown_enum_waring(cls.__name__, value)
+        return cls._UNKNOWN
