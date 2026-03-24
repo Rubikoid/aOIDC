@@ -3,121 +3,138 @@ import json
 import logging
 import secrets
 
+import cyclopts
 import h11
+import rich.console
 import structlog
 from httpx import URL
 from structlog.stdlib import get_logger
 
 from .oidc.oidc import OIDCClient
 
+c = rich.console.Console()
+app = cyclopts.App()
+
+
 structlog.stdlib.recreate_defaults()
 log = get_logger("test")
 logging.getLogger("httpcore").setLevel(logging.ERROR)
-
-raw_provider = json.loads(open("testing.json").read())[-1]
-CLIENT_ID = raw_provider["client_id"]
-CLIENT_SECRET = raw_provider["client_secret"]
-DISCOVERY = raw_provider["url"]
+# logging.getLogger("rich").setLevel(logging.ERROR)
 
 
-async def run_handler(*, port: int) -> tuple[int, asyncio.Future[str], asyncio.Task]:  # noqa: C901, PLR0915
-    MAX_RECV = 2**16
-    TIMEOUT = 10
+@app.command()
+async def check_token(discovery_url: str, token: str, client_id: str | None = None):
+    client = OIDCClient(discovery_endpoint=discovery_url, client_id=client_id)
+    await client.init()
 
-    future: asyncio.Future[str] = asyncio.Future()
+    result = await client.validate_id_token(token)
 
-    async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        remote_addr = writer.get_extra_info("peername")
-        remote_ip, remote_port, *_ = remote_addr
+    c.print("Checked token, got:", result)
 
-        _log = log.bind(remote_ip=remote_ip, remote_port=remote_port)
 
-        conn = h11.Connection(h11.SERVER)
-        events = []
+@app.command()
+async def tests():
+    raw_provider = json.loads(open("testing.json").read())[-1]
+    CLIENT_ID = raw_provider["client_id"]
+    CLIENT_SECRET = raw_provider["client_secret"]
+    DISCOVERY = raw_provider["url"]
 
-        async with asyncio.timeout(TIMEOUT):
-            conn.receive_data(await reader.read(MAX_RECV))
-            while True:
-                try:
-                    event = conn.next_event()
-                    if event is h11.NEED_DATA:
-                        conn.receive_data(await reader.read(MAX_RECV))
-                        continue
+    async def run_handler(*, port: int) -> tuple[int, asyncio.Future[str], asyncio.Task]:  # noqa: C901, PLR0915
+        MAX_RECV = 2**16
+        TIMEOUT = 10
 
-                    events.append(event)
+        future: asyncio.Future[str] = asyncio.Future()
 
-                    # An EndOfMessage event signifies the end of the request
-                    if isinstance(event, h11.EndOfMessage):
+        async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+            remote_addr = writer.get_extra_info("peername")
+            remote_ip, remote_port, *_ = remote_addr
+
+            _log = log.bind(remote_ip=remote_ip, remote_port=remote_port)
+
+            conn = h11.Connection(h11.SERVER)
+            events = []
+
+            async with asyncio.timeout(TIMEOUT):
+                conn.receive_data(await reader.read(MAX_RECV))
+                while True:
+                    try:
+                        event = conn.next_event()
+                        if event is h11.NEED_DATA:
+                            conn.receive_data(await reader.read(MAX_RECV))
+                            continue
+
+                        events.append(event)
+
+                        # An EndOfMessage event signifies the end of the request
+                        if isinstance(event, h11.EndOfMessage):
+                            break
+
+                    except h11.ProtocolError:
+                        _log.exception()
                         break
 
-                except h11.ProtocolError:
-                    _log.exception()
+            request_event = next((e for e in events if isinstance(e, h11.Request)), None)
+
+            if request_event:
+                _log.info("Got request!", method=request_event.method, target=request_event.target)
+                target = request_event.target.decode("utf-8")
+                future.set_result(target)
+            else:
+                future.set_exception(Exception)
+
+            body = b"""ok <script type="text/javascript">setTimeout(function(){window.close();},1000);</script>"""
+            es = [
+                h11.Response(
+                    status_code=200,
+                    headers=[
+                        ("Content-Type", "text/html; charset=utf-8"),
+                        ("Content-Length", str(len(body))),
+                        ("Server", "test"),
+                    ],
+                ),
+                h11.Data(data=body),
+                h11.EndOfMessage(),
+            ]
+
+            for e in es:
+                serialized = conn.send(e)
+
+                if not serialized:
                     break
 
-        request_event = next((e for e in events if isinstance(e, h11.Request)), None)
+                writer.write(serialized)
 
-        if request_event:
-            _log.info("Got request!", method=request_event.method, target=request_event.target)
-            target = request_event.target.decode("utf-8")
-            future.set_result(target)
-        else:
-            future.set_exception(Exception)
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()  # Ensure the writer is closed
 
-        body = b"""ok <script type="text/javascript">setTimeout(function(){window.close();},1000);</script>"""
-        es = [
-            h11.Response(
-                status_code=200,
-                headers=[
-                    ("Content-Type", "text/html; charset=utf-8"),
-                    ("Content-Length", str(len(body))),
-                    ("Server", "test"),
-                ],
-            ),
-            h11.Data(data=body),
-            h11.EndOfMessage(),
-        ]
+        server = await asyncio.start_server(
+            handle_client,
+            "0.0.0.0",
+            port,
+        )
 
-        for e in es:
-            serialized = conn.send(e)
+        for socket in server.sockets:
+            _v = socket.getsockname()
+            host, port, *_ = _v
+            break
 
-            if not serialized:
-                break
+        log.info("Starting handler", port=port)
 
-            writer.write(serialized)
+        async def srv_task():
+            async with server:
+                await server.serve_forever()
 
-        await writer.drain()
-        writer.close()
-        await writer.wait_closed()  # Ensure the writer is closed
+        srv = asyncio.create_task(srv_task())
 
-    server = await asyncio.start_server(
-        handle_client,
-        "0.0.0.0",
-        port,
-    )
+        async def watcher_task():
+            await future
+            srv.cancel()
 
-    for socket in server.sockets:
-        _v = socket.getsockname()
-        host, port, *_ = _v
-        break
+        watcher = asyncio.create_task(watcher_task())
 
-    log.info("Starting handler", port=port)
+        return port, future, watcher  # pyright: ignore[reportPossiblyUnboundVariable]
 
-    async def srv_task():
-        async with server:
-            await server.serve_forever()
-
-    srv = asyncio.create_task(srv_task())
-
-    async def watcher_task():
-        await future
-        srv.cancel()
-
-    watcher = asyncio.create_task(watcher_task())
-
-    return port, future, watcher  # pyright: ignore[reportPossiblyUnboundVariable]
-
-
-async def main():
     # for CLIENT_ID, CLIENT_SECRET, DISCOVERY in public_tests:
     client = OIDCClient(discovery_endpoint=DISCOVERY, client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
     await client.init()
@@ -156,4 +173,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    app()
