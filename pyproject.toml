@@ -32,6 +32,7 @@ dependencies = [
 fastapi = ["fastapi >= 0.100.0, < 1"]
 
 [dependency-groups]
+cli = ["cyclopts ~= 4.10.1"]
 dev = [
     "ruff >= 0.15.0, < 1",
     "pytest >= 8.3.4, < 9",
