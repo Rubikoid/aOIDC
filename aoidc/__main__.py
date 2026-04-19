@@ -33,6 +33,18 @@ async def check_token(discovery_url: str, token: str, client_id: str | None = No
 
 
 @app.command()
+async def service_token(discovery_url: str, client_id: str, client_secret: str) -> None:
+    client = OIDCClient(discovery_endpoint=discovery_url, client_id=client_id, client_secret=client_secret)
+    await client.init()
+
+    token = await client.request_client_credentials_token(scopes=["openid"])
+    c.print("Got token:", token)
+
+    idt = await client.validate_id_token(token.id_token)
+    c.print("ID Token (validated):", idt)
+
+
+@app.command()
 async def tests():
     raw_provider = json.loads(open("testing.json").read())[-1]
     CLIENT_ID = raw_provider["client_id"]
