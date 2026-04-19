@@ -1,8 +1,9 @@
 import asyncio
 import datetime
 from collections.abc import Mapping, Sequence
+from typing import Any
 
-from httpx import URL, AsyncClient, BasicAuth
+from httpx import URL, AsyncClient, BasicAuth, Response
 from joserfc.jwk import KeySet
 from pydantic import AnyUrl
 
@@ -109,6 +110,37 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
             self.keyset = KeySet.import_key_set(jwks_resp.json())
             self.keyset_update = now
 
+    async def _request_token_endpoint(self, data: Mapping[str, Any]) -> Response:
+        if not self.metadata.token_endpoint:
+            raise GenericOAuthError("Metadata does not contain token_endpoint")
+
+        client_id = self.CLIENT_ID
+        if client_id is None:
+            raise GenericOAuthError("client_id is None")
+
+        client_secret = self.CLIENT_SECRET
+        if client_secret is None:
+            raise GenericOAuthError("client_secret is None")
+
+        if not self.pass_client_secret_in_body:
+            token_response = await self._client.post(
+                transform_url(self.metadata.token_endpoint),
+                data=data,
+                auth=BasicAuth(
+                    username=client_id,
+                    password=client_secret,
+                ),
+            )
+        else:
+            if client_secret in data:
+                raise GenericOAuthError("`client_secret` already in basic data. You are doing something wrong.")
+            token_response = await self._client.post(
+                transform_url(self.metadata.token_endpoint),
+                data=dict(data) | {"client_secret": client_secret},
+            )
+
+        return token_response
+
     async def authorization_code_flow_start(
         self,
         /,
@@ -177,16 +209,9 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
         Your app, not this library is responsible for `state` validation and checks
         """
 
-        if not self.metadata.token_endpoint:
-            raise GenericOAuthError("Metadata does not contain token_endpoint")
-
         client_id = self.CLIENT_ID
         if client_id is None:
             raise GenericOAuthError("client_id is None")
-
-        client_secret = self.CLIENT_SECRET
-        if client_secret is None:
-            raise GenericOAuthError("client_secret is None")
 
         basic_data = {
             "grant_type": GrantTypes.AUTHORIZATION_CODE,
@@ -196,29 +221,39 @@ class BaseOAuth2Client[T: TokenResponse, M: Metadata, MR: BaseMetadataResolver]:
         }
         basic_data.update(extra_data)
 
-        if not self.pass_client_secret_in_body:
-            token_response = await self._client.post(
-                transform_url(self.metadata.token_endpoint),
-                data=basic_data,
-                auth=BasicAuth(
-                    username=client_id,
-                    password=client_secret,
-                ),
-            )
-        else:
-            if client_secret in basic_data:
-                raise GenericOAuthError("`client_secret` already in basic data. You doing something wrong.")
-            token_response = await self._client.post(
-                transform_url(self.metadata.token_endpoint),
-                data=basic_data | {"client_secret": client_secret},
-            )
-
+        token_response = await self._request_token_endpoint(basic_data)
         token_response.raise_for_status()
 
         # model_validate_json is broken, lol
         # https://github.com/pydantic/pydantic/issues/12960
         json = token_response.json()
-        token = self.token_type().model_validate_json(json)
+        token = self.token_type().model_validate(json)
+        return token
+
+    async def request_client_credentials_token(
+        self,
+        scopes: Sequence[str] = (),
+        extra_data: Mapping[str, str] = {},
+    ) -> T:
+        if not self.metadata.token_endpoint:
+            raise GenericOAuthError("Metadata does not contain token_endpoint")
+
+        if GrantTypes.CLIENT_CREDENTIALS not in self.metadata.grant_types_supported:
+            raise GenericOAuthError("Grant type `CLIENT_CREDENTIALS` does not supported by OIDC")
+
+        basic_data: dict[str, Any] = {
+            "grant_type": GrantTypes.CLIENT_CREDENTIALS,
+            "scope": " ".join(scopes),
+        }
+        basic_data.update(extra_data)
+
+        token_response = await self._request_token_endpoint(basic_data)
+        token_response.raise_for_status()
+
+        # model_validate_json is broken, lol
+        # https://github.com/pydantic/pydantic/issues/12960
+        json = token_response.json()
+        token = self.token_type().model_validate(json)
         return token
 
 
