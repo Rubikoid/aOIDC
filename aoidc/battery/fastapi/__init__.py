@@ -7,6 +7,7 @@ except ImportError:
     ) from None
 
 from collections.abc import Sequence
+from logging import getLogger
 
 import joserfc.errors
 from starlette.exceptions import HTTPException
@@ -21,6 +22,8 @@ from aoidc.oidc.oidc import BaseOIDCClient
 from fastapi.openapi import models as openapi_models
 from fastapi.security.base import SecurityBase
 from fastapi.security.utils import get_authorization_scheme_param
+
+logger = getLogger("aoidc.battery.fastapi")
 
 
 class OpenIdConnectBetter[O: BaseOIDCClient, T: GenericIDToken](SecurityBase):
@@ -136,6 +139,12 @@ class OpenIdConnectBetter[O: BaseOIDCClient, T: GenericIDToken](SecurityBase):
         try:
             token = await self.resolve_token(request)
         except (joserfc.errors.JoseError, TokenValidationError, ValueError) as ex:
+            logger.error(
+                "Token validation error",
+                extra={"url": request.url},
+                exc_info=True,
+            )
+
             if self.auto_error:
                 raise self.make_not_authenticated_error() from ex
             return None
