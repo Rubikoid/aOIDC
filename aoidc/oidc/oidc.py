@@ -6,7 +6,14 @@ from joserfc import jwt
 from joserfc.errors import BadSignatureError
 from pydantic import AnyUrl
 
-from aoidc.errors import GenericOIDCError, TokenValidationError
+from aoidc.errors import (
+    GenericOIDCError,
+    TokenAudValidationError,
+    TokenExpireValidationError,
+    TokenFutureValidationError,
+    TokenIssuerValidationError,
+    TokenValidationError,
+)
 from aoidc.oauth2.client import BaseOAuth2Client
 from aoidc.oauth2.context import ValidationContext
 from aoidc.oauth2.rfc_6749_oauth.models import AccessToken
@@ -64,31 +71,34 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
         now = utc_now()
 
         # check issuer
-        if not self.settings.DISALBE_TOKEN_ISSUER_CHECK and parsed_token.iss != self.metadata.issuer:
-            raise TokenValidationError("Invalid `iss` in token")
+        if not self.settings.DISABLE_TOKEN_ISSUER_CHECK and parsed_token.iss != self.metadata.issuer:
+            raise TokenIssuerValidationError(
+                issuer=str(parsed_token.iss),
+                metadata_issuer=str(self.metadata.issuer),
+            )
 
-        if not self.settings.DISALBE_TOKEN_AUDIENCE_CHECK:
+        if not self.settings.DISABLE_TOKEN_AUDIENCE_CHECK:
             if not self.CLIENT_ID:
                 raise GenericOIDCError("No client_id")
 
             # check aud
             if isinstance(parsed_token.aud, str):
                 if parsed_token.aud != self.CLIENT_ID:
-                    raise TokenValidationError("Untrusted `aud` in token")
+                    raise TokenAudValidationError(parsed_token.aud, (self.CLIENT_ID,))
             else:
                 full_trusted_auds = set(self.trusted_auds) | {self.CLIENT_ID}
                 auds_diff = parsed_token.aud - full_trusted_auds
                 if self.CLIENT_ID not in parsed_token.aud or len(auds_diff) > 0:
-                    raise TokenValidationError("Untrusted `aud` entry in token")
+                    raise TokenAudValidationError(parsed_token.aud, full_trusted_auds)
 
         # check DTs
-        if not self.settings.DISALBE_TOKEN_EXPIRY_CHECK and parsed_token.exp < now:
-            raise TokenValidationError("Token expired")
+        if not self.settings.DISABLE_TOKEN_EXPIRY_CHECK and parsed_token.exp < now:
+            raise TokenExpireValidationError(exp=parsed_token.exp, now=now)
 
         # WTF: это не против стандарта, но концептуально
         # переделать?
-        if not self.settings.DISALBE_TOKEN_EXPIRY_CHECK and (parsed_token.iat - now) > datetime.timedelta(seconds=5):
-            raise TokenValidationError("Token issued in future")
+        if not self.settings.DISABLE_TOKEN_EXPIRY_CHECK and (parsed_token.iat - now) > datetime.timedelta(seconds=5):
+            raise TokenFutureValidationError(iat=parsed_token.iat, now=now)
 
         # if isinstance(parsed_token.aud, set):
         #     if not parsed_token.azp:
@@ -182,7 +192,7 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
 
         return id_token
 
-    async def userinfo(self, token: AccessToken) -> None:
+    async def userinfo(self, token: AccessToken) -> dict:  # TODO: make a model here
         if not self.metadata.userinfo_endpoint:
             raise GenericOIDCError("No `userinfo_endpoint` in metadata")
 
@@ -191,7 +201,7 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
             auth=BearerAuth(token),
         )
 
-        print(response.text)
+        return response.json()
 
 
 class OIDCClient(BaseOIDCClient[TokenResponse, Metadata, MetadataResolver]):

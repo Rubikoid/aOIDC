@@ -49,21 +49,21 @@ class ProcessingSettings(BaseModel):
         This option WILL APPLY to any HTTP client, passed to BaseOAuth2Client, since it have implict on security
     """
 
-    DISALBE_TOKEN_ISSUER_CHECK: bool = False
+    DISABLE_TOKEN_ISSUER_CHECK: bool = False
     """
         This option is INSECURE, but may be useful for debugging, and MUST NOT be enabled in production env
 
         This option will disable token issuer check
     """
 
-    DISALBE_TOKEN_AUDIENCE_CHECK: bool = False
+    DISABLE_TOKEN_AUDIENCE_CHECK: bool = False
     """
         This option is INSECURE, but may be useful for debugging, and MUST NOT be enabled in production env
 
         This option will disable token audience check
     """
 
-    DISALBE_TOKEN_EXPIRY_CHECK: bool = False
+    DISABLE_TOKEN_EXPIRY_CHECK: bool = False
     """
         This option is INSECURE, but may be useful for debugging, and MUST NOT be enabled in production env
 
@@ -100,14 +100,14 @@ class _Settings(ProcessingSettings, BaseSettings):
         if self.DEFAULT_CLIENT_NO_VERIFY:
             warnings.warn("Globally enabled potential insecure option DEFAULT_CLIENT_NO_VERIFY", stacklevel=1)
 
-        if self.DISALBE_TOKEN_ISSUER_CHECK:
-            warnings.warn("Globally enabled insecure option DISALBE_TOKEN_ISSUER_CHECK", stacklevel=1)
+        if self.DISABLE_TOKEN_ISSUER_CHECK:
+            warnings.warn("Globally enabled insecure option DISABLE_TOKEN_ISSUER_CHECK", stacklevel=1)
 
-        if self.DISALBE_TOKEN_AUDIENCE_CHECK:
-            warnings.warn("Globally enabled insecure option DISALBE_TOKEN_AUDIENCE_CHECK", stacklevel=1)
+        if self.DISABLE_TOKEN_AUDIENCE_CHECK:
+            warnings.warn("Globally enabled insecure option DISABLE_TOKEN_AUDIENCE_CHECK", stacklevel=1)
 
-        if self.DISALBE_TOKEN_EXPIRY_CHECK:
-            warnings.warn("Globally enabled insecure option DISALBE_TOKEN_EXPIRY_CHECK", stacklevel=1)
+        if self.DISABLE_TOKEN_EXPIRY_CHECK:
+            warnings.warn("Globally enabled insecure option DISABLE_TOKEN_EXPIRY_CHECK", stacklevel=1)
 
         return self
 

@@ -43,7 +43,7 @@ def generic_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl
         raise TypeError("Invalid context, passed to validator")
 
     if endpoint.scheme != "https" and not ctx.settings.ALLOW_HTTP:
-        raise GenericValidationError("Invalid endpoint")
+        raise GenericValidationError("Endpoint has `http` scheme and ALLOW_HTTP debug setting is off")
 
     check_for_allowned_urls(endpoint, info)
 
@@ -64,10 +64,13 @@ def issuer_validator(issuer: Issuer, info: ValidationInfo) -> Issuer:
 
     ctx = info.context
     if not isinstance(ctx, ValidationContext):
-        raise TypeError("Invalid context, passed to validator")
+        raise TypeError("Invalid context passed to validator")
 
-    if (issuer.scheme != "https" and not ctx.settings.ALLOW_HTTP) or issuer.query or issuer.fragment:
-        raise GenericValidationError("Invalid issuer")
+    if issuer.scheme != "https" and not ctx.settings.ALLOW_HTTP:
+        raise GenericValidationError("Issuer has `http` scheme and ALLOW_HTTP debug setting is off")
+
+    if issuer.query or issuer.fragment:
+        raise GenericValidationError("Issuer has query or fragment, violates RFC")
 
     check_for_allowned_urls(issuer, info)
 
@@ -94,8 +97,11 @@ def authorization_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> 
     if not isinstance(ctx, ValidationContext):
         raise TypeError("Invalid context, passed to validator")
 
-    if (endpoint.scheme != "https" and not ctx.settings.ALLOW_HTTP) or endpoint.fragment:
-        raise GenericValidationError("Invalid endpoint")
+    if endpoint.scheme != "https" and not ctx.settings.ALLOW_HTTP:
+        raise GenericValidationError("Auth endpoint has `http` scheme and ALLOW_HTTP debug setting is off")
+
+    if endpoint.fragment:
+        raise GenericValidationError("Auth endpoint has fragment, violates RFC")
 
     check_for_allowned_urls(endpoint, info)
 
@@ -121,8 +127,11 @@ def token_endpoint_validator(endpoint: AnyUrl, info: ValidationInfo) -> AnyUrl:
     if not isinstance(ctx, ValidationContext):
         raise TypeError("Invalid context, passed to validator")
 
-    if (endpoint.scheme != "https" and not ctx.settings.ALLOW_HTTP) or endpoint.fragment:
-        raise GenericValidationError("Invalid endpoint")
+    if endpoint.scheme != "https" and not ctx.settings.ALLOW_HTTP:
+        raise GenericValidationError("Token endpoint has `http` scheme and ALLOW_HTTP debug setting is off")
+
+    if endpoint.fragment:
+        raise GenericValidationError("Token endpoint has fragment, violates RFC")
 
     check_for_allowned_urls(endpoint, info)
 
