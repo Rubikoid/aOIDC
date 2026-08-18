@@ -160,10 +160,10 @@ def json_web_algos_validator(algos: set[JsonWebAlgos], info: ValidationInfo) -> 
         raise TypeError("Invalid context, passed to validator")
 
     if JsonWebAlgos.RS256 not in algos:
-        raise GenericValidationError("RS256 is not supported")
+        raise GenericValidationError("RS256 is not supported by IDP")
 
     if not ctx.settings.ALLOW_ALG_NONE and JsonWebAlgos.NONE in algos:
-        raise GenericValidationError("NONE alg is supported")
+        raise GenericValidationError("NONE alg is supported by IDP")
 
     return algos
 
