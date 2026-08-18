@@ -1,6 +1,7 @@
 import json
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import structlog
 from structlog.stdlib import get_logger
@@ -14,7 +15,7 @@ structlog.stdlib.recreate_defaults()
 log = get_logger("fastapi")
 logging.getLogger("httpcore").setLevel(logging.ERROR)
 
-raw_provider = json.loads(open("testing.json").read())[-1]
+raw_provider = json.loads(Path("testing.json").read_text())[-1]
 CLIENT_ID = raw_provider["client_id"]
 CLIENT_SECRET = raw_provider["client_secret"]
 DISCOVERY = raw_provider["url"]

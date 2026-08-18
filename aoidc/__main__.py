@@ -1,3 +1,4 @@
+# ruff: noqa: C901, PLR0915, RUF059, S104, ASYNC230, SIM115, PTH123, N806
 import asyncio
 import json
 import logging
@@ -51,7 +52,7 @@ async def tests():
     CLIENT_SECRET = raw_provider["client_secret"]
     DISCOVERY = raw_provider["url"]
 
-    async def run_handler(*, port: int) -> tuple[int, asyncio.Future[str], asyncio.Task]:  # noqa: C901, PLR0915
+    async def run_handler(*, port: int) -> tuple[int, asyncio.Future[str], asyncio.Task]:
         MAX_RECV = 2**16
         TIMEOUT = 10
 

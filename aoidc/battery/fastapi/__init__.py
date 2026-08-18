@@ -1,5 +1,5 @@
 try:
-    import fastapi
+    import fastapi  # noqa: F401 # когда-нибудь потом.
 except ImportError:
     raise ImportError(
         "FastAPI is required for fastapi batteries."  # ...
@@ -38,7 +38,7 @@ class OpenIdConnectBetter[O: BaseOIDCClient, T: GenericIDToken](SecurityBase):
 
     __initialized: bool = False
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         oidc: O,
@@ -139,10 +139,9 @@ class OpenIdConnectBetter[O: BaseOIDCClient, T: GenericIDToken](SecurityBase):
         try:
             token = await self.resolve_token(request)
         except (joserfc.errors.JoseError, TokenValidationError, ValueError) as ex:
-            logger.error(
+            logger.exception(
                 "Token validation error",
                 extra={"url": request.url},
-                exc_info=True,
             )
 
             if self.auto_error:

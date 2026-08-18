@@ -59,6 +59,11 @@ fix = false
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
+    "CPY001",
+    "EM102",
+    "ARG001",
+    "ARG002",
+    "TC001",
     "FIX001", # | line-contains-fixme                                   | i can track it with vscode & grep
     "FIX002", # | line-contains-todo                                    | i can track it with vscode & grep
     "TD00",   # | missing-todo-...                                      | i can track it with git
