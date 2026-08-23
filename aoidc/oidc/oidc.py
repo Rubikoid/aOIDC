@@ -3,7 +3,7 @@ from collections.abc import Mapping, Sequence
 
 from httpx import URL
 from joserfc import jwt
-from joserfc.errors import BadSignatureError
+from joserfc.errors import BadSignatureError, InvalidKeyIdError
 from pydantic import AnyUrl
 
 from aoidc.errors import (
@@ -42,7 +42,7 @@ class BaseOIDCClient[T: TokenResponse, M: Metadata, MR: MetadataResolver](BaseOA
                 token,
                 self.keyset,
             )
-        except BadSignatureError:
+        except (BadSignatureError, InvalidKeyIdError):
             await self.refresh_keyset()
             return await self._token_decode(token, repeat=repeat + 1)
 
